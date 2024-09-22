@@ -123,6 +123,3 @@ class Follow(models.Model):
         :return: Строка вида "user.username follows following.username".
         """
         return f"{self.user.username} follows {self.following.username}"
-
-
-"""Получается нужно только добавить доп проверку? не убирая старую"""

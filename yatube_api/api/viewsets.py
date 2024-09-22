@@ -1,18 +1,22 @@
 """Базовые Viewsets."""
 
-from rest_framework import viewsets, permissions
-from .permissions import IsAuthorOrReadOnly
-from .paginators import OptionalLimitOffsetPagination
+from rest_framework import viewsets, permissions, filters
+from rest_framework.mixins import ListModelMixin, CreateModelMixin
 
 
-class BasePostCommentViewSet(viewsets.ModelViewSet):
-    """вьюсет для моделей с CRUD операциями и пользовательскими правами."""
+class BaseFollowViewSet(viewsets.GenericViewSet,
+                        ListModelMixin,
+                        CreateModelMixin):
+    """Базовый вьюсет для подписок."""
 
-    permission_classes = [
-        permissions.IsAuthenticatedOrReadOnly, IsAuthorOrReadOnly
-    ]
-    pagination_class = OptionalLimitOffsetPagination
+    permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['following__username']
+
+    def get_queryset(self):
+        """Возвращает подписки текущего пользователя."""
+        return self.request.user.follows.all()
 
     def perform_create(self, serializer):
-        """Привязывает объект к текущему пользователю."""
-        serializer.save(author=self.request.user)
+        """Передает текущего пользователя в сериализатор при создании."""
+        serializer.save(user=self.request.user)
