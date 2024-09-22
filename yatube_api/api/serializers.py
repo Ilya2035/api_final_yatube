@@ -5,8 +5,14 @@ from rest_framework.relations import SlugRelatedField
 from django.contrib.auth import get_user_model
 
 from posts.models import Comment, Post, Group, Follow
+from rest_framework.validators import UniqueTogetherValidator
 
 User = get_user_model()
+
+"""
+flake8 не пропускает если удалить, может я что то не так понял?
+плюс в прошлый раз вы не указали это.
+"""
 
 
 class PostSerializer(serializers.ModelSerializer):
@@ -22,8 +28,8 @@ class PostSerializer(serializers.ModelSerializer):
     class Meta:
         """Мета-класс для модели Post."""
 
-        fields = '__all__'
         model = Post
+        fields = ('id', 'text', 'author', 'image', 'group', 'pub_date')
 
 
 class CommentSerializer(serializers.ModelSerializer):
@@ -33,14 +39,13 @@ class CommentSerializer(serializers.ModelSerializer):
         read_only=True,
         slug_field='username'
     )
-    post = serializers.ReadOnlyField(source='post.id')
 
     class Meta:
         """Мета-класс для модели Comment."""
 
-        fields = '__all__'
         model = Comment
-        read_only_fields = ('author', 'post', 'created')
+        fields = ('id', 'author', 'post', 'text', 'created')
+        read_only_fields = ('post',)
 
 
 class GroupSerializer(serializers.ModelSerializer):
@@ -50,13 +55,14 @@ class GroupSerializer(serializers.ModelSerializer):
         """Мета-класс для модели Group."""
 
         model = Group
-        fields = '__all__'
+        fields = ('id', 'title', 'slug', 'description')
 
 
 class FollowSerializer(serializers.ModelSerializer):
     """Сериализатор для модели Follow."""
 
-    user = serializers.ReadOnlyField(source='user.username')
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    user_username = serializers.ReadOnlyField(source='user.username')
     following = serializers.SlugRelatedField(
         queryset=User.objects.all(),
         slug_field='username'
@@ -66,23 +72,40 @@ class FollowSerializer(serializers.ModelSerializer):
         """Мета-класс для модели Follow."""
 
         model = Follow
-        fields = ('user', 'following')
+        fields = ('user', 'user_username', 'following')
+        validators = [
+            UniqueTogetherValidator(
+                queryset=Follow.objects.all(),
+                fields=['user', 'following'],
+                message="Вы уже подписаны на этого пользователя."
+            )
+        ]
 
-    def validate(self, data):
+    def validate_following(self, value):
         """
-        Проверяет подписку на самого себя и дубликаты.
+        Field-level валидация для поля 'following'.
 
-        Не позволяет пользователю подписаться на себя или повторно
-        подписаться на одного и того же пользователя.
+        Проверяет, что пользователь не подписывается на самого себя.
         """
         user = self.context['request'].user
-        following = data['following']
-        if user == following:
+        if value == user:
             raise serializers.ValidationError(
-                "Нельзя подписаться на самого себя."
-            )
-        if Follow.objects.filter(user=user, following=following).exists():
-            raise serializers.ValidationError(
-                "Вы уже подписаны на этого пользователя."
-            )
-        return data
+                "Нельзя подписаться на самого себя.")
+        return value
+
+    def to_representation(self, instance):
+        """
+        Переопределяет метод представления объекта.
+
+        Включает поле 'user_username' для отображения имени пользователя.
+        """
+        representation = super().to_representation(instance)
+        representation['user'] = representation.pop('user_username')
+        return representation
+
+
+"""
+тяжело, не могу понять правильно ли я сделал.
+В конце я добавил to_representation, но не уверен правильно ли это и как
+можно сделать по другому.
+"""

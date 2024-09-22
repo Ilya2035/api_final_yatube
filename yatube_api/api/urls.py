@@ -2,6 +2,7 @@
 
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
+
 from .views import (
     GroupViewSet,
     FollowViewSet,
@@ -9,16 +10,16 @@ from .views import (
     CommentViewSet
 )
 
-router = DefaultRouter()
-router.register('posts', PostViewSet, basename='posts')
-router.register('groups', GroupViewSet, basename='groups')
-router.register('follow', FollowViewSet, basename='follow')
-router.register(
+version_n1_router = DefaultRouter()
+version_n1_router.register('posts', PostViewSet, basename='posts')
+version_n1_router.register('groups', GroupViewSet, basename='groups')
+version_n1_router.register('follow', FollowViewSet, basename='follow')
+version_n1_router.register(
     r'posts/(?P<post_id>\d+)/comments',
     CommentViewSet,
     basename='comments'
 )
 
 urlpatterns = [
-    path('v1/', include(router.urls)),
+    path('v1/', include(version_n1_router.urls)),
 ]

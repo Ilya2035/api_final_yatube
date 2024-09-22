@@ -2,6 +2,7 @@
 
 from django.contrib.auth import get_user_model
 from django.db import models
+from django.db.models import Q, F
 
 User = get_user_model()
 
@@ -93,15 +94,35 @@ class Follow(models.Model):
     """Модель для описания подписок на пользователей."""
 
     user = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name='follower',
+        User, on_delete=models.CASCADE, related_name='follows',
         verbose_name='Подписчик'
     )
     following = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name='following',
+        User, on_delete=models.CASCADE, related_name='followers',
         verbose_name='Автор'
     )
 
     class Meta:
         """Мета-данные для модели Follow."""
 
-        unique_together = ('user', 'following')
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'following'],
+                name='unique_user_following'
+            ),
+            models.CheckConstraint(
+                check=~Q(user=F('following')),
+                name='prevent_self_follow'
+            )
+        ]
+
+    def __str__(self):
+        """
+        Возвращает строковое представление объекта Follow.
+
+        :return: Строка вида "user.username follows following.username".
+        """
+        return f"{self.user.username} follows {self.following.username}"
+
+
+"""Получается нужно только добавить доп проверку? не убирая старую"""
