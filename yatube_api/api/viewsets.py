@@ -1,22 +1,21 @@
 """Базовые Viewsets."""
 
-from rest_framework import viewsets, permissions, filters
+from rest_framework import viewsets
 from rest_framework.mixins import ListModelMixin, CreateModelMixin
 
 
-class BaseFollowViewSet(viewsets.GenericViewSet,
-                        ListModelMixin,
-                        CreateModelMixin):
-    """Базовый вьюсет для подписок."""
+class CreateListViewSet(
+    viewsets.GenericViewSet,
+    ListModelMixin,
+    CreateModelMixin
+):
+    """
+    Базовый ViewSet, предоставляет `list` (список) и `create` (создание).
 
-    permission_classes = [permissions.IsAuthenticated]
-    filter_backends = [filters.SearchFilter]
-    search_fields = ['following__username']
+    Необходимо переопределить его и задать атрибуты `.queryset`
+    и `.serializer_class`. Этот класс можно использовать для создания
+    общих поведений, которые будут переиспользоваться в других
+    ViewSet-классах API.
+    """
 
-    def get_queryset(self):
-        """Возвращает подписки текущего пользователя."""
-        return self.request.user.follows.all()
-
-    def perform_create(self, serializer):
-        """Передает текущего пользователя в сериализатор при создании."""
-        serializer.save(user=self.request.user)
+    pass

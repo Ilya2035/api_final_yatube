@@ -1,13 +1,13 @@
 """Модуль, содержащий view-классы для API."""
 
-from rest_framework import viewsets, permissions
+from rest_framework import viewsets, permissions, filters
 from rest_framework.pagination import LimitOffsetPagination
 from django.shortcuts import get_object_or_404
 
 from .permissions import IsAuthorOrReadOnly
 from .serializers import (GroupSerializer, FollowSerializer,
                           PostSerializer, CommentSerializer)
-from .viewsets import BaseFollowViewSet
+from .viewsets import CreateListViewSet
 from posts.models import Group, Post
 
 
@@ -19,10 +19,21 @@ class GroupViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.AllowAny]
 
 
-class FollowViewSet(BaseFollowViewSet):
+class FollowViewSet(CreateListViewSet):
     """Представление для подписок, используя базовый вьюсет."""
 
     serializer_class = FollowSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['following__username']
+
+    def get_queryset(self):
+        """Возвращает подписки текущего пользователя."""
+        return self.request.user.follows.all()
+
+    def perform_create(self, serializer):
+        """Передает текущего пользователя в сериализатор при создании."""
+        serializer.save(user=self.request.user)
 
 
 class PostViewSet(viewsets.ModelViewSet):
